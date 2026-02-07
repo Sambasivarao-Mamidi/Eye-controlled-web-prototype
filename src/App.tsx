@@ -133,7 +133,7 @@ function App() {
   }, [stopTracking, resetCalibration]);
 
   return (
-    <>
+    <div className={`app-container ${appState}`}>
       {/* Permission Screen */}
       {appState === 'permission' && (
         <div className="permission-screen">
@@ -147,7 +147,7 @@ function App() {
           </p>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-500/20 border border-red-500/30 rounded-xl text-red-300">
+            <div className="mb-4 p-4 bg-red-950/50 border border-red-600 rounded text-red-300">
               <strong>Error:</strong> {error}
             </div>
           )}
@@ -180,7 +180,7 @@ function App() {
             )}
           </button>
 
-          <p className="mt-8 text-sm text-white/40 max-w-md">
+          <p className="mt-8 text-sm text-gray-500 max-w-md">
             Your camera feed is processed locally and never sent to any server.
             We use MediaPipe Face Mesh for real-time iris detection.
           </p>
@@ -219,7 +219,7 @@ function App() {
 
       {/* Video Feed Preview */}
       <div
-        className="video-feed"
+        className={`video-feed ${appState === 'dashboard' ? 'video-feed-dashboard' : 'video-feed-calibration'} ${appState === 'permission' ? 'video-feed-permission' : ''}`}
         style={{
           display: isTracking ? 'block' : 'none',
           opacity: appState === 'calibrating' ? 1 : 0.7,
@@ -231,22 +231,22 @@ function App() {
           playsInline
           muted
         />
-        <div className="absolute bottom-2 left-2 right-2 text-center text-xs text-white/70 bg-black/50 rounded px-2 py-1">
+        <div className="absolute transparent bottom-0 left-2 right-2 text-center text-xs text-white/70 bg-black/50 rounded px-2 py-1">
           Camera Feed (Mirrored)
         </div>
       </div>
 
       {/* Debug info (hidden in production) */}
-      {import.meta.env.DEV && isTracking && eyeCoords && (
-        <div className="fixed bottom-20 right-4 glass-card text-xs font-mono z-50">
-          <div className="text-white/50 mb-1">Debug Info:</div>
+      {/* {import.meta.env.DEV && isTracking && eyeCoords && (
+        <div className="fixed bottom-20  right-4 glass-card text-xs font-mono z-50 text-gray-300">
+          <div className="text-gray-400 mb-1">Debug Info:</div>
           <div>Eye: ({eyeCoords.average.x.toFixed(4)}, {eyeCoords.average.y.toFixed(4)})</div>
           <div>Screen: ({pointerPos.x.toFixed(0)}, {pointerPos.y.toFixed(0)})</div>
           <div>Dwell: {(dwellProgress * 100).toFixed(0)}%</div>
           <div>Calibrated: {calibrationState.isComplete ? 'Yes' : 'No'}</div>
         </div>
-      )}
-    </>
+      )} */}
+    </div>
   );
 }
 

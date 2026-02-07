@@ -22,6 +22,7 @@ export const Calibration: React.FC<CalibrationProps> = ({
     const handleKeyPress = useCallback((e: KeyboardEvent) => {
         if (e.code === 'Space' && isCalibrating && eyeCoords) {
             e.preventDefault();
+            // Using the averaged gaze coordinates for better accuracy
             onRecordPoint(eyeCoords.average.x, eyeCoords.average.y);
         }
         if (e.code === 'Escape' && onSkip) {
@@ -37,105 +38,92 @@ export const Calibration: React.FC<CalibrationProps> = ({
     if (!isCalibrating) return null;
 
     return (
-        <div className="calibration-overlay">
-            {/* Instructions */}
-            <div className="fixed top-8 left-1/2 -translate-x-1/2 text-center z-10">
-                <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                    Calibration
-                </h2>
-                <p className="text-xl text-white/80 mb-2">
-                    Look at the <span className="text-purple-400 font-semibold">glowing dot</span> and press{' '}
-                    <kbd className="px-3 py-1 bg-white/10 rounded-lg border border-white/20 font-mono">
-                        SPACE
-                    </kbd>
-                </p>
-                <p className="text-sm text-white/50">
-                    Press ESC to skip calibration (uses simple mapping)
-                </p>
-            </div>
-
-            {/* Progress indicator */}
-            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4">
-                <div className="glass-card px-6 py-3 flex items-center gap-4">
-                    <span className="text-white/70">Progress:</span>
-                    <div className="flex gap-2">
-                        {calibrationTargets.map((_, index) => (
-                            <div
-                                key={index}
-                                className={`w-3 h-3 rounded-full transition-all duration-300 ${completedPoints.includes(index)
-                                    ? 'bg-green-400 shadow-lg shadow-green-400/50'
-                                    : index === currentPointIndex
-                                        ? 'bg-purple-400 shadow-lg shadow-purple-400/50 animate-pulse'
-                                        : 'bg-white/20'
-                                    }`}
-                            />
-                        ))}
-                    </div>
-                    <span className="text-white font-semibold">
-                        {completedPoints.length} / {calibrationTargets.length}
-                    </span>
+        <div className="fixed inset-0 z-[100] bg-gray-950 flex flex-col overflow-hidden" data-testid="calibration-overlay">
+            
+            {/* Header: Progress & Status */}
+            {/* <header className="h-20 bg-gray-900/90 backdrop-blur border-b border-gray-800 flex items-center justify-between px-8 shrink-0 z-50">
+                <div className="flex items-center gap-4">
+                    <span className="text-2xl animate-pulse">🎯</span>
+                    <h2 className="text-xl font-bold text-white" data-testid="calibration-title-heading">Calibration</h2>
                 </div>
-            </div>
 
-            {/* Calibration points */}
-            {calibrationTargets.map((target, index) => {
-                const isActive = index === currentPointIndex;
-                const isCompleted = completedPoints.includes(index);
-
-                return (
-                    <div
-                        key={index}
-                        className={`calibration-point ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
-                        style={{
-                            left: `${target.x}px`,
-                            top: `${target.y}px`,
-                            transform: 'translate(-50%, -50%)',
-                        }}
-                    >
-                        {/* Outer ring for active point */}
-                        {isActive && (
-                            <div className="absolute inset-0 rounded-full border-2 border-purple-400/50 animate-ping" />
-                        )}
-
-                        {/* Inner dot */}
-                        <div
-                            className={`calibration-point-inner ${isCompleted ? 'bg-green-400' : ''}`}
-                            style={{
-                                background: isCompleted
-                                    ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)'
-                                    : undefined
-                            }}
-                        />
-
-                        {/* Checkmark for completed */}
-                        {isCompleted && (
-                            <svg
-                                className="absolute inset-0 w-full h-full p-4 text-white"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="3"
-                            >
-                                <polyline points="20,6 9,17 4,12" />
-                            </svg>
-                        )}
-                    </div>
-                );
-            })}
-
-            {/* Eye position indicator */}
-            {eyeCoords && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 text-center">
-                    <div className="glass-card px-4 py-2 text-sm">
-                        <span className="text-white/50">Eye Position: </span>
-                        <span className="text-purple-400 font-mono">
-                            ({eyeCoords.average.x.toFixed(3)}, {eyeCoords.average.y.toFixed(3)})
+                <div className="flex items-center gap-6">
+                    <div className="bg-gray-800/50 border border-gray-700 px-4 py-2 rounded-lg flex items-center gap-3" data-testid="calibration-progress-card-wrapper">
+                        <span className="text-gray-400 text-sm" data-testid="calibration-progress-label">Progress:</span>
+                        <div className="flex gap-1.5" data-testid="calibration-progress-dots-container">
+                            {calibrationTargets.map((_, index) => (
+                                <div
+                                    key={index}
+                                    className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                        completedPoints.includes(index)
+                                            ? 'bg-green-400'
+                                            : index === currentPointIndex
+                                                ? 'bg-blue-400 animate-pulse scale-110'
+                                                : 'bg-gray-700'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-white font-mono text-sm ml-2">
+                            {completedPoints.length}/{calibrationTargets.length}
                         </span>
                     </div>
                 </div>
-            )}
+            </header> */}
+
+            {/* Main Viewport: Where the dots are rendered */}
+            <main className="flex-1 relative w-full overflow-hidden cursor-none">
+                {calibrationTargets.map((target, index) => {
+                    const isActive = index === currentPointIndex;
+                    const isCompleted = completedPoints.includes(index);
+
+                    // Calculation logic: Handles both pixel values (e.g. 500) and percentages (e.g. 0.5)
+                    const styleTop = target.y <= 1 ? `${target.y * 100}%` : `${target.y}px`;
+                    const styleLeft = target.x <= 1 ? `${target.x * 100}%` : `${target.x}px`;
+
+                    return (
+                        <div
+                            key={index}
+                            className={`absolute transform -translate-x-1/2 -translate-y-1/2 transition-all duration-500
+                                ${isActive ? 'z-30' : 'z-10'}
+                            `}
+                            style={{
+                                left: styleLeft,
+                                top: styleTop,
+                            }}
+                            data-testid={`calibration-point-${index}`}
+                        >
+                            <div className="relative flex items-center justify-center w-16 h-16">
+                                {/* Glow effect for active point */}
+                                {isActive && (
+                                    <div className="absolute inset-0 rounded-full border-2 border-blue-400/50 animate-ping" />
+                                )}
+
+                                <div
+                                    className={`
+                                        w-8 h-8 rounded-full shadow-lg transition-all duration-300 flex items-center justify-center
+                                        ${isActive ? 'bg-blue-500 scale-125 shadow-[0_0_25px_rgba(59,130,246,0.7)]' : ''}
+                                        ${isCompleted ? 'bg-green-500 opacity-40' : ''}
+                                        ${!isActive && !isCompleted ? 'bg-gray-700 opacity-20' : ''}
+                                    `}
+                                >
+                                    {isCompleted ? (
+                                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4">
+                                            <polyline points="20,6 9,17 4,12" />
+                                        </svg>
+                                    ) : (
+                                        isActive && <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })}
+            </main>
+
+        
         </div>
     );
 };
 
-export default Calibration;
+export default Calibration; 
