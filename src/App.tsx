@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useEyeTracking } from './hooks/useEyeTracking';
 import { useCalibration } from './hooks/useCalibration';
 import { useDwellClick } from './hooks/useDwellClick';
@@ -8,9 +8,15 @@ import { MainDashboard } from './components/MainDashboard';
 
 type AppState = 'permission' | 'calibrating' | 'dashboard';
 
+// Second layer smoothing factor for screen position
+const SCREEN_SMOOTHING_FACTOR = 0.2;
+
 function App() {
   const [appState, setAppState] = useState<AppState>('permission');
   const [screenPosition, setScreenPosition] = useState({ x: 0, y: 0 });
+
+  // Store previous screen position for additional smoothing
+  const prevScreenPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Initialize hooks
   const {
@@ -38,15 +44,33 @@ function App() {
     updateGaze,
   } = useDwellClick({}, appState === 'dashboard' && calibrationState.isComplete);
 
-  // Map eye coordinates to screen position
+  // Map eye coordinates to screen position with additional smoothing
   useEffect(() => {
     if (eyeCoords && isTracking) {
       const mapped = mapToScreen(eyeCoords.average.x, eyeCoords.average.y);
-      setScreenPosition(mapped);
 
-      // Update dwell detection
-      if (appState === 'dashboard') {
-        updateGaze(mapped.x, mapped.y);
+      // Apply second layer of smoothing at screen coordinate level
+      if (prevScreenPosRef.current) {
+        const prev = prevScreenPosRef.current;
+        const smoothedPos = {
+          x: prev.x + SCREEN_SMOOTHING_FACTOR * (mapped.x - prev.x),
+          y: prev.y + SCREEN_SMOOTHING_FACTOR * (mapped.y - prev.y),
+        };
+        prevScreenPosRef.current = smoothedPos;
+        setScreenPosition(smoothedPos);
+
+        // Update dwell detection with smoothed position
+        if (appState === 'dashboard') {
+          updateGaze(smoothedPos.x, smoothedPos.y);
+        }
+      } else {
+        // First frame - initialize without smoothing
+        prevScreenPosRef.current = mapped;
+        setScreenPosition(mapped);
+
+        if (appState === 'dashboard') {
+          updateGaze(mapped.x, mapped.y);
+        }
       }
     }
   }, [eyeCoords, isTracking, mapToScreen, appState, updateGaze]);

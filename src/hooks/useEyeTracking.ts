@@ -25,10 +25,17 @@ export interface UseEyeTrackingReturn {
 const LEFT_IRIS_CENTER = 468;
 const RIGHT_IRIS_CENTER = 473;
 
+// Smoothing factor (0-1): lower = smoother but slower, higher = more responsive but jittery
+// Using 0.15 for very smooth movement - 85% previous position, 15% new position
+const SMOOTHING_FACTOR = 0.15;
+
 export function useEyeTracking(): UseEyeTrackingReturn {
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const faceMeshRef = useRef<FaceMesh | null>(null);
     const cameraRef = useRef<Camera | null>(null);
+
+    // Store previous smoothed coordinates for exponential moving average
+    const prevCoordsRef = useRef<EyeCoordinates | null>(null);
 
     const [isLoading, setIsLoading] = useState(false);
     const [isTracking, setIsTracking] = useState(false);
@@ -56,14 +63,38 @@ export function useEyeTracking(): UseEyeTrackingReturn {
                 y: (landmarks[362].y + landmarks[263].y) / 2,
             };
 
-            setEyeCoords({
+            const rawCoords: EyeCoordinates = {
                 leftIris: leftEye,
                 rightIris: rightEye,
                 average: {
                     x: (leftEye.x + rightEye.x) / 2,
                     y: (leftEye.y + rightEye.y) / 2,
                 },
-            });
+            };
+
+            // Apply smoothing to fallback coordinates too
+            if (prevCoordsRef.current) {
+                const prev = prevCoordsRef.current;
+                const smoothedCoords: EyeCoordinates = {
+                    leftIris: {
+                        x: prev.leftIris.x + SMOOTHING_FACTOR * (rawCoords.leftIris.x - prev.leftIris.x),
+                        y: prev.leftIris.y + SMOOTHING_FACTOR * (rawCoords.leftIris.y - prev.leftIris.y),
+                    },
+                    rightIris: {
+                        x: prev.rightIris.x + SMOOTHING_FACTOR * (rawCoords.rightIris.x - prev.rightIris.x),
+                        y: prev.rightIris.y + SMOOTHING_FACTOR * (rawCoords.rightIris.y - prev.rightIris.y),
+                    },
+                    average: {
+                        x: prev.average.x + SMOOTHING_FACTOR * (rawCoords.average.x - prev.average.x),
+                        y: prev.average.y + SMOOTHING_FACTOR * (rawCoords.average.y - prev.average.y),
+                    },
+                };
+                prevCoordsRef.current = smoothedCoords;
+                setEyeCoords(smoothedCoords);
+            } else {
+                prevCoordsRef.current = rawCoords;
+                setEyeCoords(rawCoords);
+            }
             return;
         }
 
@@ -75,11 +106,36 @@ export function useEyeTracking(): UseEyeTrackingReturn {
         const avgX = (leftIris.x + rightIris.x) / 2;
         const avgY = (leftIris.y + rightIris.y) / 2;
 
-        setEyeCoords({
+        const rawCoords: EyeCoordinates = {
             leftIris: { x: leftIris.x, y: leftIris.y },
             rightIris: { x: rightIris.x, y: rightIris.y },
             average: { x: avgX, y: avgY },
-        });
+        };
+
+        // Apply exponential moving average smoothing to reduce jitter
+        if (prevCoordsRef.current) {
+            const prev = prevCoordsRef.current;
+            const smoothedCoords: EyeCoordinates = {
+                leftIris: {
+                    x: prev.leftIris.x + SMOOTHING_FACTOR * (rawCoords.leftIris.x - prev.leftIris.x),
+                    y: prev.leftIris.y + SMOOTHING_FACTOR * (rawCoords.leftIris.y - prev.leftIris.y),
+                },
+                rightIris: {
+                    x: prev.rightIris.x + SMOOTHING_FACTOR * (rawCoords.rightIris.x - prev.rightIris.x),
+                    y: prev.rightIris.y + SMOOTHING_FACTOR * (rawCoords.rightIris.y - prev.rightIris.y),
+                },
+                average: {
+                    x: prev.average.x + SMOOTHING_FACTOR * (rawCoords.average.x - prev.average.x),
+                    y: prev.average.y + SMOOTHING_FACTOR * (rawCoords.average.y - prev.average.y),
+                },
+            };
+            prevCoordsRef.current = smoothedCoords;
+            setEyeCoords(smoothedCoords);
+        } else {
+            // First frame - no smoothing needed
+            prevCoordsRef.current = rawCoords;
+            setEyeCoords(rawCoords);
+        }
     }, []);
 
     const startTracking = useCallback(async () => {

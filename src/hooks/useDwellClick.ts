@@ -15,7 +15,7 @@ export interface UseDwellClickReturn {
 
 const DEFAULT_CONFIG: DwellClickConfig = {
     dwellRadius: 50,
-    dwellDuration: 1500,
+    dwellDuration: 800,
     cooldownDuration: 500,
 };
 

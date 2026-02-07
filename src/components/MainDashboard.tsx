@@ -101,7 +101,7 @@ export const MainDashboard: React.FC<MainDashboardProps> = ({
                 <div className="glass-card mb-8 text-center">
                     <h2 className="text-2xl font-bold mb-2">Test Eye-Click Interaction</h2>
                     <p className="text-white/70">
-                        Gaze at any button below for <span className="text-purple-400 font-semibold">1.5 seconds</span> to trigger a click.
+                        Gaze at any button below for <span className="text-purple-400 font-semibold">0.8 seconds</span> to trigger a click.
                         The progress ring around the cursor shows the dwell timer.
                     </p>
                 </div>

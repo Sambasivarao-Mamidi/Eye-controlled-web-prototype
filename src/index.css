@@ -3,7 +3,7 @@
 /* Custom CSS Variables */
 :root {
   --pointer-size: 40px;
-  --dwell-time: 1500ms;
+  --dwell-time: 800ms;
   --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --glass-bg: rgba(255, 255, 255, 0.1);
   --glass-border: rgba(255, 255, 255, 0.2);
@@ -32,7 +32,7 @@ body {
   pointer-events: none;
   z-index: 99999;
   transform: translate(-50%, -50%);
-  transition: left 0.1s ease-out, top 0.1s ease-out;
+  transition: left 0.15s ease-out, top 0.15s ease-out;
 }
 
 .pointer-dot {
@@ -41,7 +41,7 @@ body {
   background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.4) 100%);
   border-radius: 50%;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
-              0 0 40px rgba(102, 126, 234, 0.3);
+    0 0 40px rgba(102, 126, 234, 0.3);
 }
 
 .dwell-ring {
@@ -110,7 +110,7 @@ body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 50%;
   box-shadow: 0 0 30px rgba(102, 126, 234, 0.8),
-              0 0 60px rgba(102, 126, 234, 0.4);
+    0 0 60px rgba(102, 126, 234, 0.4);
 }
 
 .calibration-point.active .calibration-point-inner {
@@ -119,9 +119,12 @@ body {
 }
 
 @keyframes pulse-calibration {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.2);
   }
@@ -215,8 +218,15 @@ body {
 }
 
 @keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Video Feed */
@@ -236,7 +246,8 @@ body {
   width: 100%;
   height: auto;
   display: block;
-  transform: scaleX(-1); /* Mirror the video */
+  transform: scaleX(-1);
+  /* Mirror the video */
 }
 
 /* Permission Screen */
@@ -293,8 +304,15 @@ body {
 
 /* Animations */
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 .float-animation {
