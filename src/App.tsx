@@ -8,15 +8,16 @@ import { MainDashboard } from './components/MainDashboard';
 
 type AppState = 'permission' | 'calibrating' | 'dashboard';
 
-// Second layer smoothing factor for screen position
-const SCREEN_SMOOTHING_FACTOR = 0.2;
+// Faster smoothing for more responsive pointer (0.35 = 35% new, 65% old)
+const SCREEN_SMOOTHING_FACTOR = 0.35;
 
 function App() {
   const [appState, setAppState] = useState<AppState>('permission');
-  const [screenPosition, setScreenPosition] = useState({ x: 0, y: 0 });
 
-  // Store previous screen position for additional smoothing
-  const prevScreenPosRef = useRef<{ x: number; y: number } | null>(null);
+  // Use ref-based position for high-frequency updates (avoids React re-renders)
+  const screenPosRef = useRef({ x: 0, y: 0 });
+  const [pointerPos, setPointerPos] = useState({ x: 0, y: 0 });
+  const rafIdRef = useRef<number | null>(null);
 
   // Initialize hooks
   const {
@@ -44,36 +45,52 @@ function App() {
     updateGaze,
   } = useDwellClick({}, appState === 'dashboard' && calibrationState.isComplete);
 
-  // Map eye coordinates to screen position with additional smoothing
+  // Smooth pointer update loop using RAF - bypasses React for smooth 60fps
+  useEffect(() => {
+    if (!isTracking) return;
+
+    let lastTime = performance.now();
+    const THROTTLE_MS = 16; // ~60fps
+
+    const updatePointer = () => {
+      const now = performance.now();
+
+      // Throttle updates to ~60fps to prevent excessive state updates
+      if (now - lastTime >= THROTTLE_MS) {
+        lastTime = now;
+        setPointerPos({ ...screenPosRef.current });
+
+        // Update dwell detection
+        if (appState === 'dashboard') {
+          updateGaze(screenPosRef.current.x, screenPosRef.current.y);
+        }
+      }
+
+      rafIdRef.current = requestAnimationFrame(updatePointer);
+    };
+
+    rafIdRef.current = requestAnimationFrame(updatePointer);
+
+    return () => {
+      if (rafIdRef.current) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
+  }, [isTracking, appState, updateGaze]);
+
+  // Map eye coordinates to screen position (updates ref, not state)
   useEffect(() => {
     if (eyeCoords && isTracking) {
       const mapped = mapToScreen(eyeCoords.average.x, eyeCoords.average.y);
+      const prev = screenPosRef.current;
 
-      // Apply second layer of smoothing at screen coordinate level
-      if (prevScreenPosRef.current) {
-        const prev = prevScreenPosRef.current;
-        const smoothedPos = {
-          x: prev.x + SCREEN_SMOOTHING_FACTOR * (mapped.x - prev.x),
-          y: prev.y + SCREEN_SMOOTHING_FACTOR * (mapped.y - prev.y),
-        };
-        prevScreenPosRef.current = smoothedPos;
-        setScreenPosition(smoothedPos);
-
-        // Update dwell detection with smoothed position
-        if (appState === 'dashboard') {
-          updateGaze(smoothedPos.x, smoothedPos.y);
-        }
-      } else {
-        // First frame - initialize without smoothing
-        prevScreenPosRef.current = mapped;
-        setScreenPosition(mapped);
-
-        if (appState === 'dashboard') {
-          updateGaze(mapped.x, mapped.y);
-        }
-      }
+      // Apply smoothing directly to ref
+      screenPosRef.current = {
+        x: prev.x + SCREEN_SMOOTHING_FACTOR * (mapped.x - prev.x),
+        y: prev.y + SCREEN_SMOOTHING_FACTOR * (mapped.y - prev.y),
+      };
     }
-  }, [eyeCoords, isTracking, mapToScreen, appState, updateGaze]);
+  }, [eyeCoords, isTracking, mapToScreen]);
 
   // Handle start button click
   const handleStart = useCallback(async () => {
@@ -193,8 +210,8 @@ function App() {
 
       {/* Virtual Pointer - always visible when tracking */}
       <VirtualPointer
-        x={screenPosition.x}
-        y={screenPosition.y}
+        x={pointerPos.x}
+        y={pointerPos.y}
         dwellProgress={dwellProgress}
         isDwelling={isDwelling}
         visible={isTracking && appState === 'dashboard'}
@@ -224,7 +241,7 @@ function App() {
         <div className="fixed bottom-20 right-4 glass-card text-xs font-mono z-50">
           <div className="text-white/50 mb-1">Debug Info:</div>
           <div>Eye: ({eyeCoords.average.x.toFixed(4)}, {eyeCoords.average.y.toFixed(4)})</div>
-          <div>Screen: ({screenPosition.x.toFixed(0)}, {screenPosition.y.toFixed(0)})</div>
+          <div>Screen: ({pointerPos.x.toFixed(0)}, {pointerPos.y.toFixed(0)})</div>
           <div>Dwell: {(dwellProgress * 100).toFixed(0)}%</div>
           <div>Calibrated: {calibrationState.isComplete ? 'Yes' : 'No'}</div>
         </div>

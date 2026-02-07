@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect, memo } from 'react';
 
 interface VirtualPointerProps {
     x: number;
@@ -8,28 +8,55 @@ interface VirtualPointerProps {
     visible: boolean;
 }
 
-export const VirtualPointer: React.FC<VirtualPointerProps> = ({
+// Memoized to prevent unnecessary re-renders
+export const VirtualPointer: React.FC<VirtualPointerProps> = memo(({
     x,
     y,
     dwellProgress,
     isDwelling,
     visible,
 }) => {
+    const pointerRef = useRef<HTMLDivElement>(null);
+    const progressRef = useRef<SVGCircleElement>(null);
+    const dotRef = useRef<HTMLDivElement>(null);
+
+    // Use RAF and direct DOM manipulation for smooth updates
+    useEffect(() => {
+        if (!pointerRef.current || !visible) return;
+
+        // Use transform for GPU-accelerated positioning
+        pointerRef.current.style.transform = `translate(${x - 20}px, ${y - 20}px)`;
+    }, [x, y, visible]);
+
+    // Update progress circle directly
+    useEffect(() => {
+        if (!progressRef.current) return;
+
+        const radius = 16;
+        const circumference = 2 * Math.PI * radius;
+        const strokeDashoffset = circumference * (1 - dwellProgress);
+
+        progressRef.current.style.strokeDashoffset = String(strokeDashoffset);
+        progressRef.current.style.opacity = isDwelling ? '1' : '0.3';
+    }, [dwellProgress, isDwelling]);
+
+    // Update dot scale
+    useEffect(() => {
+        if (!dotRef.current) return;
+        dotRef.current.style.transform = isDwelling ? 'scale(1.2)' : 'scale(1)';
+    }, [isDwelling]);
+
     if (!visible) return null;
 
     // SVG circle calculations
     const radius = 16;
     const circumference = 2 * Math.PI * radius;
-    const strokeDashoffset = circumference * (1 - dwellProgress);
 
     return (
         <div
+            ref={pointerRef}
             className="virtual-pointer"
-            style={{
-                left: `${x}px`,
-                top: `${y}px`,
-                opacity: visible ? 1 : 0,
-            }}
+            style={{ opacity: 1 }}
         >
             {/* Dwell progress ring */}
             <div className="dwell-ring">
@@ -43,29 +70,27 @@ export const VirtualPointer: React.FC<VirtualPointerProps> = ({
                     />
                     {/* Progress circle */}
                     <circle
+                        ref={progressRef}
                         className="progress-circle"
                         cx="20"
                         cy="20"
                         r={radius}
                         strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        style={{
-                            opacity: isDwelling ? 1 : 0.3,
-                        }}
+                        strokeDashoffset={circumference}
                     />
                 </svg>
             </div>
 
             {/* Center dot */}
             <div
+                ref={dotRef}
                 className="pointer-dot"
-                style={{
-                    transform: isDwelling ? 'scale(1.2)' : 'scale(1)',
-                    transition: 'transform 0.15s ease',
-                }}
+                style={{ transition: 'transform 0.1s ease-out' }}
             />
         </div>
     );
-};
+});
+
+VirtualPointer.displayName = 'VirtualPointer';
 
 export default VirtualPointer;

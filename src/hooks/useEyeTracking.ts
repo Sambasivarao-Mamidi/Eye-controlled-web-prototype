@@ -26,8 +26,8 @@ const LEFT_IRIS_CENTER = 468;
 const RIGHT_IRIS_CENTER = 473;
 
 // Smoothing factor (0-1): lower = smoother but slower, higher = more responsive but jittery
-// Using 0.15 for very smooth movement - 85% previous position, 15% new position
-const SMOOTHING_FACTOR = 0.15;
+// Using 0.3 for balanced movement - 70% previous position, 30% new position
+const SMOOTHING_FACTOR = 0.3;
 
 export function useEyeTracking(): UseEyeTrackingReturn {
     const videoRef = useRef<HTMLVideoElement | null>(null);
